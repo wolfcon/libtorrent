@@ -30,6 +30,8 @@ POSSIBILITY OF SUCH DAMAGE.
 
 */
 
+#include <boost/asio/ts/executor.hpp>
+
 #include "libtorrent/config.hpp"
 #include "libtorrent/disk_buffer_pool.hpp"
 #include "libtorrent/assert.hpp"
@@ -102,7 +104,7 @@ namespace libtorrent {
 		std::vector<std::weak_ptr<disk_observer>> cbs;
 		m_observers.swap(cbs);
 		l.unlock();
-		m_ios.post(std::bind(&watermark_callback, std::move(cbs)));
+		post(m_ios, std::bind(&watermark_callback, std::move(cbs)));
 	}
 
 	char* disk_buffer_pool::allocate_buffer(char const* category)
