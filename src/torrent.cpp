@@ -640,8 +640,7 @@ bool is_downloading_state(int const st)
 				std::string str;
 				for (auto const& peer : p.peers)
 				{
-					error_code ec;
-					str += peer.address().to_string(ec);
+					str += peer.address().to_string();
 					str += ' ';
 				}
 				debug_log("add_torrent add_peer() [ %s] connect-candidates: %d"
@@ -2020,11 +2019,10 @@ bool is_downloading_state(int const st)
 #ifndef TORRENT_DISABLE_LOGGING
 			if (should_log())
 			{
-				error_code ec;
 				std::string str;
 				for (auto const& peer : m_add_torrent_params->peers)
 				{
-					str += peer.address().to_string(ec);
+					str += peer.address().to_string();
 					str += ' ';
 				}
 				debug_log("resume-checked add_peer() [ %s] connect-candidates: %d"
@@ -2662,11 +2660,10 @@ bool is_downloading_state(int const st)
 #ifndef TORRENT_DISABLE_LOGGING
 		if (should_log())
 		{
-			error_code ec;
 			std::string str;
 			for (auto const& peer : peers)
 			{
-				str += peer.address().to_string(ec);
+				str += peer.address().to_string();
 				str += ' ';
 			}
 			debug_log("DHT add_peer() [ %s] connect-candidates: %d"
@@ -3271,16 +3268,15 @@ bool is_downloading_state(int const st)
 #ifndef TORRENT_DISABLE_LOGGING
 		if (should_log())
 		{
-			error_code ec;
 			std::string str;
 			for (auto const& peer : resp.peers4)
 			{
-				str += address_v4(peer.ip).to_string(ec);
+				str += address_v4(peer.ip).to_string();
 				str += ' ';
 			}
 			for (auto const& peer : resp.peers6)
 			{
-				str += address_v6(peer.ip).to_string(ec);
+				str += address_v6(peer.ip).to_string();
 				str += ' ';
 			}
 			debug_log("tracker add_peer() [ %s] connect-candidates: %d"
@@ -3491,8 +3487,7 @@ bool is_downloading_state(int const st)
 #ifndef TORRENT_DISABLE_LOGGING
 			if (should_log())
 			{
-				error_code ec;
-				debug_log("blocked ip from tracker: %s", host.address().to_string(ec).c_str());
+				debug_log("blocked ip from tracker: %s", host.address().to_string().c_str());
 			}
 #endif
 			if (m_ses.alerts().should_post<peer_blocked_alert>())
@@ -3507,9 +3502,8 @@ bool is_downloading_state(int const st)
 #ifndef TORRENT_DISABLE_LOGGING
 		if (should_log())
 		{
-			error_code ec;
 			debug_log("name-lookup add_peer() [ %s ] connect-candidates: %d"
-				, host.address().to_string(ec).c_str()
+				, host.address().to_string().c_str()
 				, m_peer_list ? m_peer_list->num_connect_candidates() : -1);
 		}
 #endif
