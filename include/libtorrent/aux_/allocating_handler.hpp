@@ -39,14 +39,44 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include <type_traits>
 
+#ifndef TORRENT_PROFILE_HANDLERS
+#define TORRENT_PROFILE_HANDLERS 0
+#endif
+
+#if TORRENT_PROFILE_HANDLERS
+#include <iostream>
+#endif
+
 namespace libtorrent { namespace aux {
+
+#if defined _GLIBCXX_DEBUG || !defined NDEBUG
+	constexpr std::size_t write_handler_max_size = 144;
+	constexpr std::size_t read_handler_max_size = 136;
+	constexpr std::size_t udp_handler_max_size = 136;
+	constexpr std::size_t tick_handler_max_size = 64;
+	constexpr std::size_t abort_handler_max_size = 72;
+	constexpr std::size_t deferred_handler_max_size = 80;
+#else
+	// if this is not divisible by 8, we're wasting space
+	constexpr std::size_t write_handler_max_size = 144;
+	constexpr std::size_t read_handler_max_size = 136;
+	constexpr std::size_t udp_handler_max_size = 136;
+	constexpr std::size_t tick_handler_max_size = 64;
+	constexpr std::size_t abort_handler_max_size = 72;
+	constexpr std::size_t deferred_handler_max_size = 80;
+#endif
+
+	enum HandlerName
+	{
+		write_handler, read_handler, udp_handler, tick_handler, abort_handler, defer_handler, utp_handler
+	};
 
 	// this is meant to provide the actual storage for the handler allocator.
 	// There's only a single slot, so the allocator is only supposed to be used
 	// for handlers where there's only a single outstanding operation at a time,
 	// per storage object. For instance, peers only ever have one outstanding
 	// read operation at a time, so it can reuse its storage for read handlers.
-	template <std::size_t Size>
+	template <std::size_t Size, HandlerName Name>
 	struct handler_storage
 	{
 #if TORRENT_USE_ASSERTS
@@ -72,7 +102,7 @@ namespace libtorrent { namespace aux {
 	template <std::size_t V>
 	struct available_size { static std::size_t const value = V; };
 
-	template <typename Required, typename Available>
+	template <typename Required, typename Available, HandlerName Name>
 	struct assert_message
 	{
 		static_assert(Required::value <= Available::value
@@ -80,10 +110,10 @@ namespace libtorrent { namespace aux {
 		static std::size_t const value = Available::value;
 	};
 
-	template <typename T, std::size_t Size>
+	template <typename T, std::size_t Size, HandlerName Name>
 	struct handler_allocator
 	{
-		template <typename U, std::size_t S>
+		template <typename U, std::size_t S, HandlerName N>
 		friend struct handler_allocator;
 
 		using value_type = T;
@@ -98,20 +128,27 @@ namespace libtorrent { namespace aux {
 		struct rebind {
 			using other = handler_allocator<U
 				, assert_message<required_size<sizeof(U)>
-				, available_size<Size>>::value>;
+				, available_size<Size>, Name>::value, Name>;
 		};
 
-		explicit handler_allocator(handler_storage<Size>* s) : m_storage(s) {}
+		explicit handler_allocator(handler_storage<Size, Name>* s) : m_storage(s) {}
 		template <typename U>
-		handler_allocator(handler_allocator<U, Size> const& other) : m_storage(other.m_storage) {}
+		handler_allocator(handler_allocator<U, Size, Name> const& other) : m_storage(other.m_storage) {}
 
 		T* allocate(std::size_t size)
 		{
 			TORRENT_UNUSED(size);
-			TORRENT_ASSERT_VAL(size * sizeof(T) <= Size, size * sizeof(T));
-#if TORRENT_USE_ASSERTS
+			TORRENT_ASSERT_VAL(size == 1, size);
+			TORRENT_ASSERT_VAL(sizeof(T) <= Size, sizeof(T));
 			TORRENT_ASSERT(!m_storage->used);
+#if TORRENT_USE_ASSERTS
 			m_storage->used = true;
+#endif
+#if TORRENT_PROFILE_HANDLERS
+			if (sizeof(T) < Size)
+			{
+				std::cout << "handler \"" << Name << "\" has " << Size << " bytes storage, but only needs " << sizeof(T) << '\n';
+			}
 #endif
 			return reinterpret_cast<T*>(&m_storage->bytes);
 		}
@@ -121,26 +158,28 @@ namespace libtorrent { namespace aux {
 			TORRENT_UNUSED(ptr);
 			TORRENT_UNUSED(size);
 
-			TORRENT_ASSERT_VAL(size * sizeof(T) <= Size, size * sizeof(T));
+			TORRENT_ASSERT_VAL(size == 1, size);
+			TORRENT_ASSERT_VAL(sizeof(T) <= Size, sizeof(T));
 			TORRENT_ASSERT(ptr == reinterpret_cast<T*>(&m_storage->bytes));
+			TORRENT_ASSERT(m_storage->used);
 #if TORRENT_USE_ASSERTS
 			m_storage->used = false;
 #endif
 		}
 
 	private:
-		handler_storage<Size>* m_storage;
+		handler_storage<Size, Name>* m_storage;
 	};
 
 	// this class is a wrapper for an asio handler object. Its main purpose
 	// is to pass along additional parameters to the asio handler allocator
 	// function, as well as providing a distinct type for the handler
 	// allocator function to overload on
-	template <class Handler, std::size_t Size>
+	template <class Handler, std::size_t Size, HandlerName Name>
 	struct allocating_handler
 	{
 		allocating_handler(
-			Handler h, handler_storage<Size>* s, error_handler_interface* eh)
+			Handler h, handler_storage<Size, Name>* s, error_handler_interface* eh)
 			: handler(std::move(h))
 			, storage(s)
 #ifndef BOOST_NO_EXCEPTIONS
@@ -176,7 +215,7 @@ namespace libtorrent { namespace aux {
 #endif
 		}
 
-		using allocator_type = handler_allocator<allocating_handler<Handler, Size>, Size>;
+		using allocator_type = handler_allocator<allocating_handler<Handler, Size, Name>, Size, Name>;
 
 		allocator_type get_allocator() const noexcept
 		{ return allocator_type{storage}; }
@@ -184,19 +223,19 @@ namespace libtorrent { namespace aux {
 	private:
 
 		Handler handler;
-		handler_storage<Size>* storage;
+		handler_storage<Size, Name>* storage;
 #ifndef BOOST_NO_EXCEPTIONS
 		error_handler_interface* error_handler;
 #endif
 	};
 
-	template <class Handler, size_t Size>
-	aux::allocating_handler<Handler, Size>
+	template <class Handler, size_t Size, HandlerName Name>
+	aux::allocating_handler<Handler, Size, Name>
 	make_handler(Handler handler
-		, handler_storage<Size>& storage
+		, handler_storage<Size, Name>& storage
 		, error_handler_interface& err_handler)
 	{
-		return aux::allocating_handler<Handler, Size>(
+		return aux::allocating_handler<Handler, Size, Name>(
 			std::forward<Handler>(handler), &storage, &err_handler);
 	}
 }
