@@ -46,12 +46,13 @@ exe profile_handlers : profile_handlers.cpp
 	: # requirements
 	<threading>multi
 	<asio-debugging>on
-	<library>libtorrent_test/<asio-debugging>on
-	<library>/torrent//torrent/<asio-debugging>on
+	<library>libtorrent_test/<asio-debugging>on/<link>static
+	<library>/torrent//torrent/<asio-debugging>on/<link>static
 	<conditional>@warnings
 	: # default-build
 	<threading>multi
 	<asio-debugging>on
+	<link>static
 	;
 
 install stage_profile_handlers : profile_handlers : <location>. ;

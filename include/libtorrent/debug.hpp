@@ -51,6 +51,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <cstring>
 #include <deque>
 #include <mutex>
+#include <algorithm>
 
 #ifdef __MACH__
 #include <mach/task_info.h>
@@ -197,11 +198,12 @@ namespace libtorrent {
 		for (auto const& e : _handler_storage)
 		{
 			std::size_t allocated = 0;
+			std::string const handler_name = demangle(e.second.allocations.begin()->first->name());
 			for (auto const& a : e.second.allocations)
 				allocated = std::max(allocated, a.second);
 
-			std::printf("%15s: capacity: %-3d allocated: %-3d\n"
-				, handler_names[e.first], int(e.second.capacity), int(allocated));
+			std::printf("%15s: capacity: %-3d allocated: %-3d handler: %s\n"
+				, handler_names[e.first], int(e.second.capacity), int(allocated), handler_name.c_str());
 		}
 	}
 
