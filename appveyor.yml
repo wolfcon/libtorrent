@@ -75,7 +75,9 @@ build_script:
   # test
   - cd %ROOT_DIRECTORY%\test
   - if defined bjam (
-    b2.exe --hash openssl-version=pre1.1 warnings=all warnings-as-errors=on -j2 %compiler% address-model=%model% picker-debugging=on invariant-checks=full variant=%variant% %linkflags% %include% link=shared crypto=%crypto% win-tests test_upnp test_natpmp testing.execute=off
+    b2.exe --hash openssl-version=pre1.1 warnings=all warnings-as-errors=on -j2 %compiler% address-model=%model% picker-debugging=on invariant-checks=full variant=%variant% %linkflags% %include% link=shared crypto=%crypto% win-tests test_upnp test_natpmp testing.execute=off &&
+    b2.exe --hash openssl-version=pre1.1 warnings=all warnings-as-errors=on -j2 %compiler% address-model=%model% picker-debugging=on invariant-checks=full variant=%variant% %linkflags% %include% link=shared crypto=%crypto% stage_profile_handlers &&
+    profile_handlers
     )
 
   # python binding

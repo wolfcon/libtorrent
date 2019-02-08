@@ -241,6 +241,8 @@ script:
       if [[ $TRAVIS_OS_NAME != "osx" ]]; then
         travis_retry bjam -j3 warnings-as-errors=on warnings=all crypto=$crypto debug-iterators=on picker-debugging=on asserts=on invariant-checks=full $toolset variant=$variant test_lsd -l300;
       fi &&
+      bjam -j3 stage_profile_handlers warnings-as-errors=on warnings=all crypto=$crypto debug-iterators=on picker-debugging=on asserts=on invariant-checks=full $toolset variant=$variant &&
+      ./profile_handlers &&
       if [ "$coverage" == "1" ]; then
         codecov --root .. --gcov-exec gcov-5;
       fi;
