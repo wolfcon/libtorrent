@@ -197,8 +197,8 @@ namespace libtorrent {
 		for (auto const& e : _handler_storage)
 		{
 			std::size_t allocated = 0;
-			for (auto const& e : e.second.allocations)
-				allocated = std::max(allocated, e.second);
+			for (auto const& a : e.second.allocations)
+				allocated = std::max(allocated, a.second);
 
 			std::printf("%15s: capacity: %-3d allocated: %-3d\n"
 				, handler_names[e.first], int(e.second.capacity), int(allocated));
