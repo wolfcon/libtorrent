@@ -42,6 +42,21 @@ explicit libtorrent_test ;
 
 lib advapi32 : : <name>Advapi32 ;
 
+exe profile_handlers : profile_handlers.cpp
+	: # requirements
+	<threading>multi
+	<asio-debugging>on
+	<library>libtorrent_test/<asio-debugging>on
+	<library>/torrent//torrent/<asio-debugging>on
+	<conditional>@warnings
+	: # default-build
+	<threading>multi
+	<asio-debugging>on
+	;
+
+install stage_profile_handlers : profile_handlers : <location>. ;
+explicit profile_handlers ;
+
 project
 	: requirements
 	<export-extra>on

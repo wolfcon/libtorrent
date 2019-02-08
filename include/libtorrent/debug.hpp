@@ -47,6 +47,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/aux_/disable_warnings_push.hpp"
 
 #include <map>
+#include <set>
 #include <cstring>
 #include <deque>
 #include <mutex>
@@ -153,15 +154,57 @@ namespace libtorrent {
 	{
 		std::lock_guard<std::mutex> l(_async_ops_mutex);
 		int ret = 0;
-		for (std::map<std::string, async_t>::iterator i = _async_ops.begin()
-			, end(_async_ops.end()); i != end; ++i)
+		for (auto const& op : _async_ops)
 		{
-			if (i->second.refs <= _async_ops_nthreads - 1) continue;
-			ret += i->second.refs;
-			std::printf("%s: (%d)\n%s\n", i->first.c_str(), i->second.refs, i->second.stack.c_str());
+			if (op.second.refs <= _async_ops_nthreads - 1) continue;
+			ret += op.second.refs;
+			std::printf("%s: (%d)\n%s\n", op.first.c_str(), op.second.refs, op.second.stack.c_str());
 		}
 		return ret;
 	}
+
+	struct handler_alloc_t
+	{
+		std::size_t capacity;
+		std::set<std::pair<std::type_info const*, std::size_t>> allocations;
+	};
+	// defined in session_impl.cpp
+	extern std::map<int, handler_alloc_t> _handler_storage;
+	extern std::mutex _handler_storage_mutex;
+
+	template <typename Handler>
+	void record_handler_allocation(int const type, std::size_t const capacity)
+	{
+		std::lock_guard<std::mutex> l(_handler_storage_mutex);
+		auto& e = _handler_storage[type];
+		e.capacity = capacity;
+		e.allocations.emplace(&typeid(Handler), sizeof(Handler));
+	}
+
+	inline void log_handler_allocators()
+	{
+		static char const* const handler_names[] = {
+			"write_handler",
+			"read_handler",
+			"udp_handler",
+			"tick_handler",
+			"abort_handler",
+			"defer_handler",
+			"utp_handler"
+		};
+		std::lock_guard<std::mutex> l(_handler_storage_mutex);
+		std::printf("handler allocator storage:\n\n");
+		for (auto const& e : _handler_storage)
+		{
+			std::size_t allocated = 0;
+			for (auto const& e : e.second.allocations)
+				allocated = std::max(allocated, e.second);
+
+			std::printf("%15s: capacity: %-3d allocated: %-3d\n"
+				, handler_names[e.first], int(e.second.capacity), int(allocated));
+		}
+	}
+
 }
 
 #define ADD_OUTSTANDING_ASYNC(x) add_outstanding_async(x)

@@ -39,25 +39,34 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include <type_traits>
 
-#ifndef TORRENT_PROFILE_HANDLERS
-#define TORRENT_PROFILE_HANDLERS 0
-#endif
-
-#if TORRENT_PROFILE_HANDLERS
-#include <iostream>
+#ifdef TORRENT_ASIO_DEBUGGING
+#include "libtorrent/debug.hpp"
 #endif
 
 namespace libtorrent { namespace aux {
 
-#if defined _GLIBCXX_DEBUG || !defined NDEBUG
+#ifdef _MSC_VER
 	constexpr std::size_t write_handler_max_size = 144;
-	constexpr std::size_t read_handler_max_size = 136;
+	constexpr std::size_t read_handler_max_size = 152;
+	constexpr std::size_t udp_handler_max_size = 136;
+	constexpr std::size_t tick_handler_max_size = 96;
+	constexpr std::size_t abort_handler_max_size = 104;
+	constexpr std::size_t deferred_handler_max_size = 80;
+#elif defined __clang__ && defined _GLIBCXX_DEBUG
+	constexpr std::size_t write_handler_max_size = 368;
+	constexpr std::size_t read_handler_max_size = 168;
+	constexpr std::size_t udp_handler_max_size = 136;
+	constexpr std::size_t tick_handler_max_size = 64;
+	constexpr std::size_t abort_handler_max_size = 72;
+	constexpr std::size_t deferred_handler_max_size = 80;
+#elif defined __GNUC__ && defined _GLIBCXX_DEBUG
+	constexpr std::size_t write_handler_max_size = 176;
+	constexpr std::size_t read_handler_max_size = 168;
 	constexpr std::size_t udp_handler_max_size = 136;
 	constexpr std::size_t tick_handler_max_size = 64;
 	constexpr std::size_t abort_handler_max_size = 72;
 	constexpr std::size_t deferred_handler_max_size = 80;
 #else
-	// if this is not divisible by 8, we're wasting space
 	constexpr std::size_t write_handler_max_size = 144;
 	constexpr std::size_t read_handler_max_size = 136;
 	constexpr std::size_t udp_handler_max_size = 136;
@@ -144,11 +153,8 @@ namespace libtorrent { namespace aux {
 #if TORRENT_USE_ASSERTS
 			m_storage->used = true;
 #endif
-#if TORRENT_PROFILE_HANDLERS
-			if (sizeof(T) < Size)
-			{
-				std::cout << "handler \"" << Name << "\" has " << Size << " bytes storage, but only needs " << sizeof(T) << '\n';
-			}
+#ifdef TORRENT_ASIO_DEBUGGING
+			record_handler_allocation<T>(static_cast<int>(Name), Size);
 #endif
 			return reinterpret_cast<T*>(&m_storage->bytes);
 		}

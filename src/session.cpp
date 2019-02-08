@@ -379,6 +379,9 @@ namespace {
 			wait_for_asio_handlers();
 #endif
 			m_thread->join();
+#if defined TORRENT_ASIO_DEBUGGING
+			log_handler_allocators();
+#endif
 		}
 	}
 
@@ -411,6 +414,9 @@ namespace {
 #endif
 			m_thread->join();
 		}
+#if defined TORRENT_ASIO_DEBUGGING
+		log_handler_allocators();
+#endif
 	}
 
 	session_params::session_params(settings_pack&& sp)
